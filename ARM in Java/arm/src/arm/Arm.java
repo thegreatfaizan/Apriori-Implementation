@@ -190,6 +190,152 @@ public class Arm {
     }
 
     
+public static Map<Set<Integer>, List<Integer>> getFrequentTransactions(List<List<String>> data, double min_support){
+        //Map<Integer, Double> eachItemSupport = new HashMap();
+        Map<Set<Integer>, List<Integer>> transactionsOfCombinations = new HashMap();
+        List<Integer> pruned_data = new ArrayList();
+        for (int itemset=0; itemset<=(data.get(0).size()-1); itemset++){
+            int freq = 0;
+            double support;
+            for (int transaction=1; transaction<=(data.size()-1); transaction++){
+                if (data.get(transaction).get(itemset).equals("t")){
+                    freq+=1;
+                }
+            }
+            support = (double)freq/(data.size()-1);
+            if (support >= min_support){
+                //eachItemSupport.put(itemset, support);
+                pruned_data.add(itemset);
+            }
+        }
+        System.out.println(pruned_data.size());
+        
+        int r=2;
+        List<List<Integer>> initial_combinations = generateCombinationSets(pruned_data, r, new ArrayList(), 0);
+        
+        //Map<Set<Integer>, Double> eachCombinationSupport = new HashMap();
+        List<List<Integer>> pruning = new ArrayList();
+        
+        for (List<Integer> combination : initial_combinations){
+            int freq = 0;
+            double support;
+            List<Integer> transaction_indices = new ArrayList();
+            for (int transaction=1; transaction<=data.size()-1; transaction++){
+                boolean flag = false;
+                for (int itemset=0; itemset<=combination.size()-1; itemset++){
+                    if (data.get(transaction).get(combination.get(itemset)).equals("t")){
+                        flag = true;
+                    }
+                    else{
+                        flag = false;
+                        break;
+                    }
+                }
+                if (flag==true){
+                    freq+=1;
+                    transaction_indices.add(transaction);
+                }
+            }
+            support = ((double)freq/(data.size()-1));
+            if (support >= min_support){
+                //eachCombinationSupport.put(new HashSet(initial_combinations.get(initial_combinations.indexOf(combination))), support);
+                pruning.add(initial_combinations.get(initial_combinations.indexOf(combination)));
+                transactionsOfCombinations.put(new HashSet(initial_combinations.get(initial_combinations.indexOf(combination))), transaction_indices);
+                /*for (int transaction=1; transaction<=data.size()-1; transaction++){
+                    boolean flag = false;
+                    for (int itemset=0; itemset<=combination.size()-1; itemset++){
+                        if (data.get(transaction).get(combination.get(itemset)).equals("t")){
+                            flag = true;
+                        }
+                        else{
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if (flag==true){
+                        rule_based_data.add(transaction);
+                    }
+                }*/
+                //final_combinations.add(initial_combinations.get(initial_combinations.indexOf(combination)));
+            }
+        }
+        System.out.println(pruning.size());
+
+        int sample_size = 3;
+        while(pruning.size()>0){
+            List<List<Integer>> combinations = new ArrayList();
+            for (List<Integer> combination: pruning){
+                for (int combination_index=0; combination_index<=pruning.size()-1; combination_index++){
+                    for (int itemset_index=0; itemset_index<=combination.size()-1; itemset_index++){
+                        Set<Integer> unique_element = new HashSet(combination);
+                        unique_element.add(pruning.get(combination_index).get(itemset_index));
+                        if (unique_element.size()==sample_size){
+                            boolean flag = true;
+                            for(List<Integer> combination_item: combinations){
+                                if(combination_item.containsAll(new ArrayList(unique_element))){
+                                    flag = false;
+                                    break;
+                                }
+                            }
+                            if (flag==true){
+                                List<Integer> new_combination = new ArrayList(unique_element);
+                                int freq = 0;
+                                double support;
+                                List<Integer> transaction_indices = new ArrayList();
+                                for (int transaction=1; transaction<=data.size()-1; transaction++){
+                                    boolean freq_flag = false;
+                                    for (int itemset=0; itemset<=new_combination.size()-1; itemset++){
+                                        if (data.get(transaction).get(new_combination.get(itemset)).equals("t")){
+                                            freq_flag = true;
+                                        }
+                                        else{
+                                            freq_flag = false;
+                                            break;
+                                        }
+                                    }
+                                    if (freq_flag==true){
+                                        freq+=1;
+                                        transaction_indices.add(transaction);
+                                    }
+                                }
+                                support = (double)freq/(data.size()-1);
+                                if (support >= min_support){
+                                    combinations.add(new_combination);
+                                    transactionsOfCombinations.put(new HashSet(new_combination), transaction_indices);
+                                    /*for (int transaction=1; transaction<=data.size()-1; transaction++){
+                                        boolean freq_flag = false;
+                                        for (int itemset=0; itemset<=combination.size()-1; itemset++){
+                                            if (data.get(transaction).get(combination.get(itemset)).equals("t")){
+                                                freq_flag = true;
+                                            }
+                                            else{
+                                                freq_flag = false;
+                                                break;
+                                            }
+                                        }
+                                        if (freq_flag==true){
+                                            rule_based_data.add(transaction);
+                                        }
+                                    }*/
+                                    //eachCombinationSupport.put(new HashSet(new_combination), support);
+                                    //final_combinations.add(new_combination);
+                                    //combinations.add(new_combination);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            pruning.clear();
+            pruning.addAll(combinations);
+            sample_size++;
+            System.out.println(pruning.size());
+
+        }
+        
+        return transactionsOfCombinations;
+    }
+    
     public static void main(String[] args) throws IOException {
          
         // Reading CSV file
@@ -214,12 +360,18 @@ public class Arm {
         double min_support = 0.3;
         double min_confidence = 0.7;
         
-        List<List<String>> rules = generateRules(data, min_support, min_confidence);
+        //List<List<String>> rules = generateRules(data, min_support, min_confidence);
         
-        for (List<String> rule: rules){
+        /*for (List<String> rule: rules){
             System.out.println(rule.subList(0, rule.size()-1).toString() + " ==> " + rule.get(rule.size()-1));
-        }
-               
+        }*/
+        
+        Map<Set<Integer>, List<Integer>> indices_of_frequent_transactions = getFrequentTransactions(data, min_support);
+        
+        for(Map.Entry<Set<Integer>, List<Integer>> eachCombinationTransactions : indices_of_frequent_transactions.entrySet()){
+            System.out.println(eachCombinationTransactions.getKey().toString() + " : " + eachCombinationTransactions.getValue().toString());
+    }
+        
     }
     
 }
